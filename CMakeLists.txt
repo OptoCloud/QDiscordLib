@@ -81,10 +81,12 @@ include_directories(
 
 set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/include/DiscordClient.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/serialization.h
 )
 
 set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/DiscordClient.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/serialization.cpp
 )
 
 add_executable(${project}

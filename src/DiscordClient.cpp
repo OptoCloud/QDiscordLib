@@ -7,6 +7,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 
+#include "serialization.h"
+
 #define urlAPI "https://discord.com/api/v6"
 #define urlCDN "https://cdn.discordapp.com/"
 
@@ -139,10 +141,16 @@ void QDiscordLib::DiscordClient::onGatewayMessage(const QString& message)
         return;
     }
 
+    // Get the STD's
+    QJsonObject s = json["s"].toObject();
+    QJsonObject t = json["t"].toObject();
+    QJsonObject d = json["d"].toObject();
+
     switch (json["op"].toInt())
     {
     case OpCodes_Dispatch:
         qDebug() << "OPCODE: Dispatch";
+        qDebug().noquote() << QJsonDocument(json).toJson(QJsonDocument::Indented);
         break;
     case OpCodes_Heartbeat:
         qDebug() << "OPCODE: Heartbeat";
@@ -170,6 +178,10 @@ void QDiscordLib::DiscordClient::onGatewayMessage(const QString& message)
         break;
     case OpCodes_Hello:
         qDebug() << "OPCODE: Hello";
+
+        m_heartbeatTimer->setSingleShot(false);
+        m_heartbeatTimer->start(d["heartbeat_interval"].toInt());
+
         identify();
         break;
     case OpCodes_HeartbeatAck:
@@ -179,32 +191,42 @@ void QDiscordLib::DiscordClient::onGatewayMessage(const QString& message)
         return;
     }
 
-    // Get the STD's
-    QJsonObject s = json["s"].toObject();
-    QJsonObject t = json["t"].toObject();
-    QJsonObject d = json["d"].toObject();
-
-    if (!d.isEmpty())
-    {
-        m_heartbeatTimer->setSingleShot(false);
-        m_heartbeatTimer->start(d["heartbeat_interval"].toInt());
-    }
 }
 
 void QDiscordLib::DiscordClient::identify()
 {
     QJsonObject properties;
+#ifdef __WIN32
     properties["$os"] = "windows";
+#else
+    properties["$os"] = linux";
+#endif
     properties["$browser"] = libName;
     properties["$device"] = libName;
 
+    Activity activity;
+    activity.type = Activity::Type::Game;
+    activity.name = "Testing...";
+
+    Presence presence;
+    presence.isAfk = false;
+    presence.status = "UwU";
+    presence.activities.append(activity);
+
     QJsonObject d;
-    d["token"] = "";
+    d["token"] = "Bot NzYxMjc2MDQzMTY4MDU1MzY2.X3YPkA.SrF3RZkJuYYXeTTd9gr6b3dwOfE";
     d["properties"] = properties;
+    d["compress"] = false;
+    d["guild_subscriptions"] = true;
+    d["presence"] = activity.toJson();
+    d["intent"] = 1<<12 | 1<<10 | 1<<9 | 1<<8 | 1<<3 | 1<<2 | 1<<1 | 1;
+
 
     QJsonObject obj;
-    obj["op"] = OpCodes_Identify;
+    obj["op"] = (int)OpCodes_Identify;
     obj["d"] = d;
+
+    qDebug().noquote() << QJsonDocument(obj).toJson(QJsonDocument::Indented);
 
     m_webSocket->sendTextMessage(QJsonDocument(obj).toJson());
 
